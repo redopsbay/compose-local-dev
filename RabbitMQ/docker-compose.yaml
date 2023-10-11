@@ -1,0 +1,38 @@
+---
+version: '3'
+services:
+  traefik-proxy:
+    image: traefik:v3.0
+    container_name: traefik-proxy
+    command:
+      - --api.insecure=true
+      - --providers.docker
+      - --entrypoints.http.address=:80
+      - --log.level=DEBUG
+    # Expose port `80` on your machine
+    ports:
+      - "80:80"
+    volumes: # give traefik-proxy access into docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    hostname: "rabbit1"
+    container_name: rabbitmq
+    labels:
+      - NAME="rabbitmq1"
+      - traefik.enable=true
+      - traefik.http.routers.rabbitmq.service=rabbitmq
+      - traefik.http.services.rabbitmq.loadbalancer.server.port=15672
+      - traefik.http.routers.rabbitmq.rule=Host(`rabbit.redopsbay.local`)
+      - traefik.http.routers.rabbitmq.entrypoints=http
+      - traefik.http.routers.rabbitmq-api.service=rabbitmq-api
+      - traefik.http.routers.rabbitmq-api.rule=Host(`rabbitapi.redopsbay.local`)
+      - traefik.http.services.rabbitmq-api.loadbalancer.server.port=5672
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "SWQOKODSQALRPCLNMEQG"
+      RABBITMQ_DEFAULT_USER: "rabbitmq"
+      RABBITMQ_DEFAULT_PASS: "rabbitmq"
+      RABBITMQ_DEFAULT_VHOST: "/"
+    ports:
+      - "5672:5672"  # API Port
+      - "15672:15672"
